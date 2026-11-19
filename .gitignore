@@ -66,3 +66,4 @@ data
 
 # JWT Private Key
 private_key.pem
+.env.test
