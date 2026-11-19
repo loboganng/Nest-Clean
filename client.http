@@ -1,17 +1,19 @@
 @baseUrl = http://localhost:3333
 @authToken = {{authenticate.response.body.access_token}}
+@questionId = {{create_question.response.body.question.id}}
+@questionSlug = {{create_question.response.body.question.slug}}
+@answerId = {{answer_question.response.body.answer.id}}
 
 # @name create_account
 POST {{baseUrl}}/accounts
 Content-Type: application/json
 
 {
-  "name": "Diego Fernandes"
-  "email": "diego3@email.com",
+  "name": "John Doe",
+  "email": "johndoe@example.com",
   "password": "123456"
 }
 
-// Precisamos separar os requests com 3 #
 ###
 
 # @name authenticate
@@ -19,7 +21,7 @@ POST {{baseUrl}}/sessions
 Content-Type: application/json
 
 {
-  "email": "diego3@email.com",
+  "email": "johndoe@example.com",
   "password": "123456"
 }
 
@@ -30,14 +32,53 @@ POST {{baseUrl}}/questions
 Content-Type: application/json
 Authorization: Bearer {{authToken}}
 
-{ 
-  "title": "New Question 2",
-  "content": "Content of question"
+{
+  "title": "How do I test a NestJS app end to end?",
+  "content": "Looking for a way to isolate the database per test file."
 }
 
 ###
 
 # @name fetch_recent_questions
 GET {{baseUrl}}/questions?page=1
+Authorization: Bearer {{authToken}}
+
+###
+
+# @name get_question_by_slug
+GET {{baseUrl}}/questions/{{questionSlug}}
+Authorization: Bearer {{authToken}}
+
+###
+
+# @name answer_question
+POST {{baseUrl}}/questions/{{questionId}}/answers
 Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "content": "Create a random PostgreSQL schema per test file."
+}
+
+###
+
+# @name choose_best_answer
+PATCH {{baseUrl}}/answers/{{answerId}}/choose-as-best
+Authorization: Bearer {{authToken}}
+
+###
+
+# @name comment_on_question
+POST {{baseUrl}}/questions/{{questionId}}/comments
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "content": "Great question!"
+}
+
+###
+
+# @name fetch_notifications
+GET {{baseUrl}}/notifications
 Authorization: Bearer {{authToken}}

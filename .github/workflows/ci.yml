@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: Lint, unit and e2e tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: docker
+          POSTGRES_DB: nest-clean
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:docker@localhost:5432/nest-clean?schema=public
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm prisma generate
+
+      - name: Lint and type-check
+        run: |
+          pnpm lint
+          pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test
+
+      # A throwaway RS256 key pair, generated for this run only.
+      - name: Generate JWT keys
+        run: |
+          openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out private.pem
+          openssl rsa -in private.pem -pubout -out public.pem
+          echo "JWT_PRIVATE_KEY=$(base64 -w0 private.pem)" >> "$GITHUB_ENV"
+          echo "JWT_PUBLIC_KEY=$(base64 -w0 public.pem)" >> "$GITHUB_ENV"
+          rm private.pem public.pem
+
+      - name: E2E tests
+        run: pnpm test:e2e
+
+      - name: Build
+        run: pnpm build

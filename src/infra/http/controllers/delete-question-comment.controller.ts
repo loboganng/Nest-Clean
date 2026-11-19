@@ -1,0 +1,26 @@
+import { Controller, Delete, HttpCode, Param } from '@nestjs/common'
+import { DeleteQuestionCommentUseCase } from '@/domain/forum/application/use-cases/delete-question-comment'
+import { CurrentUser } from '@/infra/auth/current-user-decorator'
+import { UserPayload } from '@/infra/auth/jwt.strategy'
+import { useCaseErrorToHttp } from '../errors/use-case-error-to-http'
+
+@Controller('/questions/comments/:id')
+export class DeleteQuestionCommentController {
+  constructor(private deleteQuestionComment: DeleteQuestionCommentUseCase) {}
+
+  @Delete()
+  @HttpCode(204)
+  async handle(
+    @CurrentUser() user: UserPayload,
+    @Param('id') questionCommentId: string,
+  ) {
+    const result = await this.deleteQuestionComment.execute({
+      authorId: user.sub,
+      questionCommentId,
+    })
+
+    if (result.isLeft()) {
+      throw useCaseErrorToHttp(result.value)
+    }
+  }
+}

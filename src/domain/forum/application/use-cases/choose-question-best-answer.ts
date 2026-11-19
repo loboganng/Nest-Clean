@@ -1,0 +1,59 @@
+import { AnswersRepository } from '../repositories/answers-repository'
+import { Question } from '../../enterprise/entities/question'
+import { QuestionsRepository } from '../repositories/questions-repository'
+import { Either, left, right } from '@/core/either'
+import { ResourceNotFoundError } from '@/core/errors/errors/resource-not-found-error'
+import { NotAllowedError } from '@/core/errors/errors/not-allowed-error'
+
+// Para ficar um pouco mais organizado, criamos uma interface que vai receber os atributos
+interface ChooseQuestionBestAnswerUseCaseRequest {
+  authorId: string
+  answerId: string
+}
+type ChooseQuestionBestAnswerUseCaseResponse = Either<
+  ResourceNotFoundError | NotAllowedError,
+  {
+    question: Question
+  }
+>
+// A partir dessa interface, utilizamos ela para recuperar os atributos da classe alvo
+export class ChooseQuestionBestAnswerUseCase {
+  // Injetando a dependência do repositório aqui
+  constructor(
+    // Aqui precisamos ter acesso tanto a resposta quanto a pergunta
+    private questionRepository: QuestionsRepository,
+    private answerRepository: AnswersRepository,
+  ) {}
+
+  // Usamos desestruturação pra recuperar os atributos
+  async execute({
+    answerId,
+    authorId,
+  }: ChooseQuestionBestAnswerUseCaseRequest): Promise<ChooseQuestionBestAnswerUseCaseResponse> {
+    const answer = await this.answerRepository.findById(answerId)
+
+    if (!answer) {
+      return left(new ResourceNotFoundError())
+    }
+
+    const question = await this.questionRepository.findById(
+      answer.questionId.toString(),
+    )
+
+    if (!question) {
+      return left(new ResourceNotFoundError())
+    }
+
+    if (authorId !== question.authorId.toString()) {
+      return left(new NotAllowedError())
+    }
+
+    question.bestAnswerId = answer.id
+
+    await this.questionRepository.save(question)
+
+    return right({
+      question,
+    })
+  }
+}
